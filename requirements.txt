@@ -1,0 +1,11 @@
+Flask
+faiss-cpu
+sentence-transformers
+textblob
+scikit-learn
+tensorflow
+pandas
+numpy
+requests
+plotly
+seaborn

@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Price Predictor</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #172a74, #21a9af);
+        }
+        .bitcoin-orange {
+            color: #f7931a;
+        }
+        .bitcoin-bg {
+            background-color: #f7931a;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <header class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto py-6 px-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="#f7931a" stroke="currentColor" stroke-width="0" class="mr-3">
+                        <path d="M12 0L11.9772 0.00843984V8.23807L17.1013 5.45926L12 0ZM11.9772 0.00843984L6.8987 5.45926L11.9772 8.23807V0.00843984ZM11.9772 16.9235V23.9916L17.1013 11.5407L11.9772 16.9235ZM11.9772 23.9916V16.9235L6.8987 11.5407L11.9772 23.9916ZM11.9772 15.0654L17.1013 9.68258L11.9772 7.82472V15.0654ZM6.8987 9.68258L11.9772 15.0654V7.82472L6.8987 9.68258Z"/>
+                    </svg>
+                    <h1 class="text-2xl md:text-3xl font-bold">BitcoinRAG Predictor</h1>
+                </div>
+                <div class="hidden md:block">
+                    <div class="bg-white bg-opacity-20 rounded-lg px-4 py-2">
+                        <span id="current-price" class="font-semibold">Loading current price...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto py-8 px-4">
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">Ask About Bitcoin Prices</h2>
+            <div class="flex flex-col md:flex-row gap-4">
+                <input type="text" id="query-input" class="flex-grow px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    placeholder="What will Bitcoin price be tomorrow?" />
+                <button id="ask-button" class="bitcoin-bg text-white px-6 py-2 rounded-lg hover:bg-opacity-90 transition-colors">
+                    Ask
+                </button>
+            </div>
+            <!-- Update the examples in index.html -->
+            <div class="mt-4 text-sm text-gray-600">
+              <p>Example questions:</p>
+              <ul class="mt-1 space-y-1">
+                  <li><a href="#" class="example-query text-blue-600 hover:underline">What was the Bitcoin price on April 2, 2025?</a></li>
+                  <li><a href="#" class="example-query text-blue-600 hover:underline">What were Bitcoin prices in the last 30 days?</a></li>
+                  <!-- <li><a href="#" class="example-query text-blue-600 hover:underline">What is the current Bitcoin price?</a></li> -->
+                  <li><a href="#" class="example-query text-blue-600 hover:underline">What will Bitcoin price be tomorrow?</a></li>
+                  <li><a href="#" class="example-query text-blue-600 hover:underline">Predict Bitcoin price next 14 days</a></li>
+                  <li><a href="#" class="example-query text-blue-600 hover:underline">Forecast Bitcoin price in 2 months</a></li>
+              </ul>
+            </div>
+        </div>
+
+        <div id="results-container" class="hidden">
+            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+                <h2 class="text-xl font-semibold mb-4">Prediction Results</h2>
+                <div id="response-text" class="prose mb-6"></div>
+                
+                <div id="chart-container" class="hidden mt-6">
+                    <h3 class="text-lg font-medium mb-3">Price Prediction Chart</h3>
+                    <div class="h-64">
+                        <canvas id="prediction-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Add this section to your results-container in index.html -->
+                <div id="market-sentiment-container" class="hidden mt-6">
+                    <h3 class="text-lg font-medium mb-3">Smart Contract Market Sentiment</h3>
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="text-lg font-semibold mb-2">
+                                    Market Trend: <span id="market-trend" class="bitcoin-orange"></span>
+                                </div>
+                                <div class="text-sm text-gray-600">
+                                    Certainty: <span id="market-certainty"></span>
+                                </div>
+                            </div>
+                            <div id="trend-icon" class="text-4xl"></div>
+                        </div>
+                        <div class="mt-3 text-sm">
+                            <span class="font-medium">Analysis:</span>
+                            <span id="market-justification" class="ml-1"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="metrics-container" class="hidden mt-6">
+                    <h3 class="text-lg font-medium mb-3">Model Metrics</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4">
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <div class="text-sm text-gray-500">Confidence</div>
+                            <div id="confidence-metric" class="text-xl font-bold bitcoin-orange"></div>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <div class="text-sm text-gray-500">Accuracy</div>
+                            <div id="accuracy-metric" class="text-xl font-bold bitcoin-orange"></div>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <div class="text-sm text-gray-500">Sentiment</div>
+                            <div id="sentiment-metric" class="text-xl font-bold bitcoin-orange"></div>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <div class="text-sm text-gray-500">Volatility</div>
+                            <div id="volatility-metric" class="text-xl font-bold bitcoin-orange"></div>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <div class="text-sm text-gray-500">MAE</div>
+                            <div id="mae-metric" class="text-xl font-bold bitcoin-orange"></div>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <div class="text-sm text-gray-500">RMSE</div>
+                            <div id="rmse-metric" class="text-xl font-bold bitcoin-orange"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Context Used</h2>
+                <div id="context-container" class="prose max-h-64 overflow-y-auto bg-gray-50 p-4 rounded-lg text-sm"></div>
+            </div>
+        </div>
+
+        <div id="loading" class="hidden bg-white rounded-lg shadow-md p-6 text-center">
+            <div class="animate-spin inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mb-4"></div>
+            <p>Analyzing Bitcoin data...</p>
+        </div>
+
+        <div id="error-container" class="hidden bg-white rounded-lg shadow-md p-6 border-l-4 border-red-500 mt-8">
+            <h3 class="text-lg font-medium text-red-800">Error</h3>
+            <p id="error-message" class="mt-2 text-red-700"></p>
+        </div>
+    </main>
+
+    <footer class="bg-gray-800 text-white py-6 mt-12">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <p>&copy; 2025 BitcoinRAG Predictor</p>
+                </div>
+                <div class="text-sm text-gray-400">
+                    <p>Powered by LSTM, RAG, and Sentiment Analysis</p>
+                    <p class="mt-1">Not financial advice. For educational purposes only.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const queryInput = document.getElementById('query-input');
+            const askButton = document.getElementById('ask-button');
+            const resultsContainer = document.getElementById('results-container');
+            const responseText = document.getElementById('response-text');
+            const contextContainer = document.getElementById('context-container');
+            const loadingDiv = document.getElementById('loading');
+            const errorContainer = document.getElementById('error-container');
+            const errorMessage = document.getElementById('error-message');
+            const chartContainer = document.getElementById('chart-container');
+            const metricsContainer = document.getElementById('metrics-container');
+            const currentPriceElement = document.getElementById('current-price');
+            
+            let predictionChart = null;
+
+            // Fetch current price on load
+            fetchCurrentPrice();
+            
+            // Set up event listeners
+            askButton.addEventListener('click', handleAskQuestion);
+            queryInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    handleAskQuestion();
+                }
+            });
+            
+            // Set up example query listeners
+            document.querySelectorAll('.example-query').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    queryInput.value = this.textContent;
+                    handleAskQuestion();
+                });
+            });
+            
+            function handleAskQuestion() {
+                const query = queryInput.value.trim();
+                if (!query) return;
+                
+                // Show loading, hide other containers
+                loadingDiv.classList.remove('hidden');
+                resultsContainer.classList.add('hidden');
+                errorContainer.classList.add('hidden');
+                
+                fetch('/ask', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: query }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    loadingDiv.classList.add('hidden');
+                    
+                    if (data.error) {
+                        showError(data.error);
+                        return;
+                    }
+                    
+                    // Display results
+                    displayResults(data);
+                })
+                .catch(error => {
+                    loadingDiv.classList.add('hidden');
+                    showError('An error occurred while processing your request.');
+                    console.error('Error:', error);
+                });
+            }
+            
+            function displayResults(data) {
+                resultsContainer.classList.remove('hidden');
+                
+                // Format and display the text response
+                responseText.innerHTML = formatTextResponse(data.final_response);
+                
+                // Display AI explanation if available
+                if (data.ai_explanation) {
+                    const aiExplanationDiv = document.createElement('div');
+                    aiExplanationDiv.className = 'bg-blue-50 border-l-4 border-blue-500 p-4 my-4';
+                    aiExplanationDiv.innerHTML = `
+                        <h4 class="font-medium text-blue-800">AI Analysis</h4>
+                        <p class="mt-2">${data.ai_explanation}</p>
+                    `;
+                    responseText.appendChild(aiExplanationDiv);
+                }
+
+                // Display context used
+                displayContext(data.retrieved_context);
+                
+                // Update metrics and charts based on prediction type
+                if (data.prediction_type === 'future') {
+                    updateMetrics(data.lstm_prediction);
+                    createPredictionChart(data);
+                    metricsContainer.classList.remove('hidden');
+                    
+                    // Display market sentiment if available
+                    displayMarketSentiment(data.market_sentiment_summary);
+                } else if (data.prediction_type === 'historical_range') {
+                    createHistoricalRangeChart(data);
+                    metricsContainer.classList.add('hidden');
+                    document.getElementById('market-sentiment-container').classList.add('hidden');
+                } else {
+                    metricsContainer.classList.add('hidden');
+                    chartContainer.classList.add('hidden');
+                    document.getElementById('market-sentiment-container').classList.add('hidden');
+                }
+            }
+
+            function displayMarketSentiment(sentimentData) {
+                const sentimentContainer = document.getElementById('market-sentiment-container');
+                
+                if (!sentimentData) {
+                    sentimentContainer.classList.add('hidden');
+                    return;
+                }
+                
+                sentimentContainer.classList.remove('hidden');
+                
+                // Get elements
+                const trendElement = document.getElementById('market-trend');
+                const certaintyElement = document.getElementById('market-certainty');
+                const justificationElement = document.getElementById('market-justification');
+                const trendIconElement = document.getElementById('trend-icon');
+                
+                // Set values
+                trendElement.textContent = sentimentData.trend || 'Unknown';
+                certaintyElement.textContent = sentimentData.certainty || 'Low';
+                justificationElement.textContent = sentimentData.justification || '';
+                
+                // Set color and icon based on trend
+                let trendColor, trendIcon;
+                switch(sentimentData.trend.toLowerCase()) {
+                    case 'bullish':
+                        trendColor = 'text-green-600';
+                        trendIcon = '📈';
+                        break;
+                    case 'bearish':
+                        trendColor = 'text-red-600';
+                        trendIcon = '📉';
+                        break;
+                    case 'neutral':
+                        trendColor = 'text-yellow-600';
+                        trendIcon = '➡️';
+                        break;
+                    default:
+                        trendColor = 'text-gray-600';
+                        trendIcon = '❓';
+                }
+                
+                trendElement.className = trendColor + ' font-bold';
+                trendIconElement.textContent = trendIcon;
+            }
+            
+            function formatTextResponse(text) {
+                if (!text) return '';
+                
+                // Replace newlines with <br> tags
+                return text.split('\n').map(line => {
+                    // Add styling for warnings
+                    if (line.includes('⚠️')) {
+                        return `<div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 my-2">${line}</div>`;
+                    }
+                    return line;
+                }).join('<br>');
+            }
+            
+            function displayContext(context) {
+                if (!context || context.length === 0) {
+                    contextContainer.innerHTML = '<em>No context data available.</em>';
+                    return;
+                }
+                
+                contextContainer.innerHTML = '<ul class="space-y-2">' + 
+                    context.map(item => `<li class="border-b border-gray-200 pb-2">${item}</li>`).join('') +
+                    '</ul>';
+            }
+            
+            function updateMetrics(prediction) {
+                if (!prediction) {
+                    metricsContainer.classList.add('hidden');
+                    return;
+                }
+                
+                metricsContainer.classList.remove('hidden');
+                
+                // Update metric values
+                document.getElementById('confidence-metric').textContent = `${prediction.confidence}%`;
+                
+                // Display sentiment score if available
+                document.getElementById('sentiment-metric').textContent = 
+                    prediction.sentiment_score ? `${prediction.sentiment_score}%` : '—';
+                
+                // Display volatility score if available
+                document.getElementById('volatility-metric').textContent = 
+                    prediction.volatility_score ? `${prediction.volatility_score}%` : '—';
+                
+                const metrics = prediction.model_metrics || {};
+                document.getElementById('accuracy-metric').textContent = `${metrics.accuracy_percentage || '—'}%`;
+                document.getElementById('mae-metric').textContent = metrics.mae || '—';
+                document.getElementById('rmse-metric').textContent = metrics.rmse || '—';
+            }
+            
+            function createPredictionChart(data) {
+                const predictionData = data.lstm_prediction;
+                
+                if (!predictionData || !predictionData.predictions_multi_day) {
+                    chartContainer.classList.add('hidden');
+                    return;
+                }
+                
+                chartContainer.classList.remove('hidden');
+                
+                // Destroy previous chart if it exists
+                if (predictionChart) {
+                    predictionChart.destroy();
+                }
+                
+                // Create labels (days)
+                const days = predictionData.predictions_multi_day.length;
+                const labels = Array.from({length: days}, (_, i) => `Day ${i+1}`);
+                
+                // Create datasets
+                const ctx = document.getElementById('prediction-chart').getContext('2d');
+                predictionChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Predicted Price ($)',
+                            data: predictionData.predictions_multi_day,
+                            borderColor: '#f7931a',
+                            backgroundColor: 'rgba(247, 147, 26, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                title: {
+                                    display: true,
+                                    text: 'Price (USD)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Day'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            function showError(message) {
+                errorContainer.classList.remove('hidden');
+                errorMessage.textContent = message;
+            }
+            
+            function fetchCurrentPrice() {
+                fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data && data.bitcoin && data.bitcoin.usd) {
+                            currentPriceElement.textContent = `BTC: $${data.bitcoin.usd.toLocaleString()}`;
+                        } else {
+                            currentPriceElement.textContent = 'Price unavailable';
+                        }
+                    })
+                    .catch(error => {
+                        currentPriceElement.textContent = 'Price unavailable';
+                        console.error('Error fetching current price:', error);
+                    });
+            }
+
+            // Add this function to the script section in index.html
+            function createHistoricalRangeChart(data) {
+                if (!data || !data.historical_range || !Array.isArray(data.historical_range)) {
+                    chartContainer.classList.add('hidden');
+                    return;
+                }
+                
+                chartContainer.classList.remove('hidden');
+                
+                // Destroy previous chart if it exists
+                if (predictionChart) {
+                    predictionChart.destroy();
+                }
+                
+                // Prepare data
+                const labels = data.historical_range.map(day => day.date);
+                const closePrices = data.historical_range.map(day => day.close);
+                const openPrices = data.historical_range.map(day => day.open);
+                const highPrices = data.historical_range.map(day => day.high);
+                const lowPrices = data.historical_range.map(day => day.low);
+                
+                // Create datasets
+                const ctx = document.getElementById('prediction-chart').getContext('2d');
+                predictionChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Close',
+                                data: closePrices,
+                                borderColor: '#f7931a',
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Open',
+                                data: openPrices,
+                                borderColor: '#3490dc',
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0.1
+                            },
+                            {
+                                label: 'High',
+                                data: highPrices,
+                                borderColor: '#38c172',
+                                borderWidth: 1,
+                                borderDash: [5, 5],
+                                fill: false,
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Low',
+                                data: lowPrices,
+                                borderColor: '#e3342f',
+                                borderWidth: 1,
+                                borderDash: [5, 5],
+                                fill: false,
+                                tension: 0.1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                title: {
+                                    display: true,
+                                    text: 'Price (USD)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Date'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Then update the displayResults function in the script section
+            function displayResults(data) {
+                resultsContainer.classList.remove('hidden');
+                
+                // Format and display the text response
+                responseText.innerHTML = formatTextResponse(data.final_response);
+                
+                // Display AI explanation if available
+                if (data.ai_explanation) {
+                    const aiExplanationDiv = document.createElement('div');
+                    aiExplanationDiv.className = 'bg-blue-50 border-l-4 border-blue-500 p-4 my-4';
+                    aiExplanationDiv.innerHTML = `
+                        <h4 class="font-medium text-blue-800">AI Analysis</h4>
+                        <p class="mt-2">${data.ai_explanation}</p>
+                    `;
+                    responseText.appendChild(aiExplanationDiv);
+                }
+
+                // Display context used
+                displayContext(data.retrieved_context);
+                
+                // Update metrics and charts based on prediction type
+                if (data.prediction_type === 'future') {
+                    updateMetrics(data.lstm_prediction);
+                    createPredictionChart(data);
+                    metricsContainer.classList.remove('hidden');
+                } else if (data.prediction_type === 'historical_range') {
+                    createHistoricalRangeChart(data);
+                    metricsContainer.classList.add('hidden');
+                } else {
+                    metricsContainer.classList.add('hidden');
+                    chartContainer.classList.add('hidden');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
