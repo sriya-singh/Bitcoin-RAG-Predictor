@@ -2,6 +2,8 @@
 
 A sophisticated Retrieval-Augmented Generation (RAG) system that combines deep learning, sentiment analysis, and real-time data retrieval to provide comprehensive Bitcoin price predictions and market analysis.
 
+![UI Screenshot](https://github.com/user-attachments/assets/2ff7fd29-1963-482c-86a7-47483fb9c0b1)
+
 ## 🎯 Overview
 
 This system uses a multi-faceted approach to Bitcoin price analysis by combining:
