@@ -177,9 +177,11 @@ def format_human_response(result, query):
         current_price = result.get("current_price")
         
         if isinstance(current_price, dict) and "error" in current_price:
-            response_parts.append(f"I couldn't retrieve the current Bitcoin price. {current_price['error']}")
+            response_parts.append(f"❌ I couldn't retrieve the current Bitcoin price. {current_price['error']}")
+        elif current_price is None:
+            response_parts.append("❌ I couldn't retrieve the current Bitcoin price. The price data is currently unavailable.")
         else:
-            response_parts.append(f"The current Bitcoin price is ${current_price:,.2f} USD.")
+            response_parts.append(f"Current price is: BTC: ${current_price:,.0f} (via CoinGecko)")
     
     else:
         # If no prediction was made

@@ -1348,6 +1348,39 @@ Respond in this JSON format:
 # Main RAG Pipeline Function
 # Orchestrates the entire retrieval-augmented generation system
 
+def is_current_price_query(query):
+    """
+    Check if query is asking for current Bitcoin price
+    """
+    query_lower = query.lower()
+    
+    # Keywords that indicate current price
+    current_indicators = [
+        'current', 'now', 'today', 'present', 'right now', 
+        'at the moment', 'currently', 'what is', 'what\'s'
+    ]
+    
+    # Price-related keywords
+    price_keywords = ['price', 'cost', 'worth', 'value', 'trading']
+    
+    # Check if query contains current indicators and price keywords
+    has_current = any(indicator in query_lower for indicator in current_indicators)
+    has_price = any(keyword in query_lower for keyword in price_keywords)
+    
+    # Also check for specific patterns
+    current_patterns = [
+        r'what\s+is\s+.*bitcoin.*price',
+        r'current.*bitcoin.*price',
+        r'bitcoin.*price.*now',
+        r'bitcoin.*price.*today',
+        r'how much.*bitcoin.*worth',
+        r'btc.*price.*current'
+    ]
+    
+    pattern_match = any(re.search(pattern, query_lower) for pattern in current_patterns)
+    
+    return (has_current and has_price) or pattern_match
+
 # Helper for JSON serialization
 def convert_numpy_types(obj):
     if isinstance(obj, np.integer):
@@ -1401,11 +1434,17 @@ def rag_pipeline(query):
         # Extract date if present
         query_date = extract_date_from_query(query)
         
-        # Check if the query explicitly asks about future prediction
-        explicit_future_query = is_future_price_query(query)
+        # NEW: Check if the query is asking for current price first
+        if is_current_price_query(query):
+            current_price = fetch_current_btc_price()
+            
+            response["prediction_type"] = "current"
+            response["current_price"] = current_price
+            # Don't include context or AI explanation for current queries
+            response["retrieved_context"] = []
         
-        # If it's an explicit future price query or no date specified (assume current/future)
-        if explicit_future_query or query_date is None:
+        # Check if the query explicitly asks about future prediction
+        elif is_future_price_query(query):
             # Determine how many days ahead to predict
             days_ahead = extract_time_period(query)
             
@@ -1456,32 +1495,41 @@ def rag_pipeline(query):
             response["market_sentiment_summary"] = market_sentiment
         
         # If it's a past price query with a specific date
-        elif query_date:
-            historical_price = get_historical_price(query_date)
-            
-            response["prediction_type"] = "historical"
-            response["date_queried"] = query_date.strftime("%Y-%m-%d")
-            response["historical_price"] = historical_price
+        elif query_date is not None:
+            # NEW: Check if the date is today's date (should be treated as current)
+            today = datetime.now().date()
+            if query_date.date() == today:
+                current_price = fetch_current_btc_price()
+                
+                response["prediction_type"] = "current"
+                response["current_price"] = current_price
+                response["retrieved_context"] = []
+            else:
+                historical_price = get_historical_price(query_date)
+                
+                response["prediction_type"] = "historical"
+                response["date_queried"] = query_date.strftime("%Y-%m-%d")
+                response["historical_price"] = historical_price
         
-        # If it seems like a current price query
+        # If it seems like a current price query (no date specified and not explicit future)
         else:
             current_price = fetch_current_btc_price()
             
             response["prediction_type"] = "current"
             response["current_price"] = current_price
+            response["retrieved_context"] = []
     
     # Convert all NumPy types to native Python types for JSON serialization
     response = convert_numpy_types(response)
     
-    # Generate AI explanation/analysis based ONLY on the retrieved context
-    try:
-        ai_explanation = generate_ai_explanation(query, retrieved_context)
-        response["ai_explanation"] = ai_explanation
-    except Exception as e:
-        response["ai_explanation_error"] = str(e)
+    if response.get("prediction_type") not in ["current"] and response.get("retrieved_context"):
+        try:
+            ai_explanation = generate_ai_explanation(query, retrieved_context)
+            response["ai_explanation"] = ai_explanation
+        except Exception as e:
+            response["ai_explanation_error"] = str(e)
     
     return response
-
 
 # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Initialize Models and Data

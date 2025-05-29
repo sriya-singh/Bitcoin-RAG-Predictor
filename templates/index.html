@@ -53,7 +53,7 @@
               <ul class="mt-1 space-y-1">
                   <li><a href="#" class="example-query text-blue-600 hover:underline">What was the Bitcoin price on April 2, 2025?</a></li>
                   <li><a href="#" class="example-query text-blue-600 hover:underline">What were Bitcoin prices in the last 30 days?</a></li>
-                  <!-- <li><a href="#" class="example-query text-blue-600 hover:underline">What is the current Bitcoin price?</a></li> -->
+                  <li><a href="#" class="example-query text-blue-600 hover:underline">What is the current Bitcoin price?</a></li>
                   <li><a href="#" class="example-query text-blue-600 hover:underline">What will Bitcoin price be tomorrow?</a></li>
                   <li><a href="#" class="example-query text-blue-600 hover:underline">Predict Bitcoin price next 14 days</a></li>
                   <li><a href="#" class="example-query text-blue-600 hover:underline">Forecast Bitcoin price in 2 months</a></li>
@@ -525,15 +525,15 @@
                 });
             }
 
-            // Then update the displayResults function in the script section
+            
             function displayResults(data) {
                 resultsContainer.classList.remove('hidden');
                 
                 // Format and display the text response
                 responseText.innerHTML = formatTextResponse(data.final_response);
                 
-                // Display AI explanation if available
-                if (data.ai_explanation) {
+                // Only display AI explanation if available AND not a current price query
+                if (data.ai_explanation && data.prediction_type !== 'current') {
                     const aiExplanationDiv = document.createElement('div');
                     aiExplanationDiv.className = 'bg-blue-50 border-l-4 border-blue-500 p-4 my-4';
                     aiExplanationDiv.innerHTML = `
@@ -543,22 +543,55 @@
                     responseText.appendChild(aiExplanationDiv);
                 }
 
-                // Display context used
-                displayContext(data.retrieved_context);
+                // Display context used (skip for current price queries)
+                if (data.prediction_type !== 'current') {
+                    displayContext(data.retrieved_context);
+                } else {
+                    // Hide context container for current price queries
+                    contextContainer.parentElement.classList.add('hidden');
+                }
                 
                 // Update metrics and charts based on prediction type
                 if (data.prediction_type === 'future') {
                     updateMetrics(data.lstm_prediction);
                     createPredictionChart(data);
                     metricsContainer.classList.remove('hidden');
+                    
+                    // Display market sentiment if available
+                    displayMarketSentiment(data.market_sentiment_summary);
+                    
+                    // Show context container for future predictions
+                    contextContainer.parentElement.classList.remove('hidden');
                 } else if (data.prediction_type === 'historical_range') {
                     createHistoricalRangeChart(data);
                     metricsContainer.classList.add('hidden');
+                    document.getElementById('market-sentiment-container').classList.add('hidden');
+                    
+                    // Show context container for historical range queries
+                    contextContainer.parentElement.classList.remove('hidden');
                 } else {
                     metricsContainer.classList.add('hidden');
                     chartContainer.classList.add('hidden');
+                    document.getElementById('market-sentiment-container').classList.add('hidden');
+                    
+                    // For current price queries, hide context container
+                    if (data.prediction_type === 'current') {
+                        contextContainer.parentElement.classList.add('hidden');
+                    } else {
+                        contextContainer.parentElement.classList.remove('hidden');
+                    }
                 }
             }
+
+            function hideContextSectionForCurrentPrice(predictionType) {
+                const contextSection = document.querySelector('#results-container .bg-white:last-child');
+                if (predictionType === 'current') {
+                    contextSection.style.display = 'none';
+                } else {
+                    contextSection.style.display = 'block';
+                }
+            }
+
         });
     </script>
 </body>
